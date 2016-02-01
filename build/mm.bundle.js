@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-angular.module('mm', ['ionic', 'mm.core', 'mm.core.course', 'mm.core.courses','mm.core.home', 'mm.core.login', 'mm.core.settings', 'mm.core.sidemenu', 'mm.core.textviewer', 'mm.core.user', 'mm.addons.calendar', 'mm.addons.coursecompletion', 'mm.addons.files', 'mm.addons.frontpage', 'mm.addons.grades', 'mm.addons.messages', 'mm.addons.mod_assign', 'mm.addons.mod_book', 'mm.addons.mod_chat', 'mm.addons.mod_choice', 'mm.addons.mod_folder', 'mm.addons.mod_forum', 'mm.addons.mod_imscp', 'mm.addons.mod_label', 'mm.addons.mod_lti', 'mm.addons.mod_page', 'mm.addons.mod_resource', 'mm.addons.mod_scorm', 'mm.addons.mod_survey', 'mm.addons.mod_url', 'mm.addons.notes', 'mm.addons.notifications', 'mm.addons.participants', 'mm.addons.pushnotifications', 'mm.addons.remotestyles', 'ngCordova', 'angular-md5', 'pascalprecht.translate', 'ngAria', 'ngIOS9UIWebViewPatch'])
+angular.module('mm', ['ionic', 'mm.core', 'mm.core.course', 'mm.core.courses','mm.core.home', 'mm.core.login', 'mm.core.settings', 'mm.core.sidemenu', 'mm.core.textviewer', 'mm.core.user', 'mm.addons.calendar', 'mm.addons.coursecompletion', 'mm.addons.files', 'mm.addons.frontpage', 'mm.addons.grades', 'mm.addons.messages', 'mm.addons.mod_assign', 'mm.addons.mod_book', 'mm.addons.mod_chat', 'mm.addons.mod_choice', 'mm.addons.mod_folder', 'mm.addons.mod_forum', 'mm.addons.mod_imscp', 'mm.addons.mod_label', 'mm.addons.mod_lti', 'mm.addons.mod_page', 'mm.addons.mod_resource','mm.addons.mod_opencast', 'mm.addons.mod_scorm', 'mm.addons.mod_survey', 'mm.addons.mod_url', 'mm.addons.notes', 'mm.addons.notifications', 'mm.addons.participants', 'mm.addons.pushnotifications', 'mm.addons.remotestyles', 'ngCordova', 'angular-md5', 'pascalprecht.translate', 'ngAria', 'ngIOS9UIWebViewPatch'])
 .run(["$ionicPlatform", function($ionicPlatform) {
   $ionicPlatform.ready(function() {
     if (window.cordova && window.cordova.plugins && window.cordova.plugins.Keyboard) {
@@ -6166,7 +6166,7 @@ angular.module('mm.core.course')
             "feedback", "file", "folder", "forum", "glossary", "ims", "imscp", "label", "lesson", "lti", "page", "quiz",
             "resource", "scorm", "survey", "url", "wiki", "workshop"
         ],
-        modsWithContent = ['book', 'folder', 'imscp', 'page', 'resource', 'url'];
+        modsWithContent = ['book', 'folder', 'imscp', 'page', 'resource', 'url','opencast'];
         function addContentsIfNeeded(module) {
         if (modsWithContent.indexOf(module.modname) > -1) {
             module.contents = module.contents || [];
@@ -6938,7 +6938,7 @@ angular.module('mm.core.login')
     $scope.connect1 = function(uname) {
         var usernamesplit=uname;
 
-            var url='http://moodlemenu.com/fis';
+            var url='http://192.168.1.12/fis';
 
         $scope.connect(url,usernamesplit);
     }
@@ -8992,7 +8992,27 @@ angular.module('mm.addons.mod_resource', ['mm.core'])
     $mmCourseDelegateProvider.registerContentHandler('mmaModResource', 'resource', '$mmaModResourceCourseContentHandler');
     $mmCoursePrefetchDelegateProvider.registerPrefetchHandler('mmaModResource', 'resource', '$mmaModResourcePrefetchHandler');
 }]);
+angular.module('mm.addons.mod_opencast', ['mm.core'])
+    .config(["$stateProvider", function($stateProvider) {
+        $stateProvider
+            .state('site.mod_opencast', {
+                url: '/mod_opencast',
+                params: {
+                    module: null,
+                    courseid: null
+                },
+                views: {
+                    'site': {
+                        controller: 'mmaModOpencastIndexCtrl',
+                        templateUrl: 'addons/mod_opencast/templates/index.html'
+                    }
+                }
+            });
+    }])
 
+    .config(["$mmCourseDelegateProvider", function($mmCourseDelegateProvider) {
+        $mmCourseDelegateProvider.registerContentHandler('mmaModOpencast', 'opencast', '$mmaModOpencastCourseContentHandler');
+    }]);
 angular.module('mm.addons.mod_scorm', ['mm.core'])
 .constant('mmaModScormComponent', 'mmaModScorm')
 .constant('mmaModScormEventLaunchNextSco', 'mma_mod_scorm_launch_next_sco')
@@ -14934,7 +14954,79 @@ angular.module('mm.addons.mod_resource')
     };
     return self;
 }]);
+angular.module('mm.addons.mod_opencast')
+    .factory('$mmaModOpencastCourseContentHandler', ["$mmCourse", "$mmaModOpencast", "$state", function($mmCourse, $mmaModOpencast, $state) {
+        var self = {};
+        self.isEnabled = function() {
+            return true;
+        };
+        self.getController = function(module, courseid) {
+            return function($scope) {
+                $scope.icon = $mmCourse.getModuleIconSrc('url');
+                $scope.title = module.name;
 
+                $scope.action = function(e) {
+                    $state.go('site.mod_opencast', {module: module, courseid: courseid});
+                };
+                if (module.contents && module.contents[0] && module.contents[0].fileurl) {
+                    $scope.buttons = [{
+                        icon: 'ion-link',
+                        label: 'mm.core.openinbrowser',
+                        action: function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            $mmaModUrl.logView(module.instance).then(function() {
+                                $mmCourse.checkModuleCompletion(courseid, module.completionstatus);
+                            });
+                            $mmaModUrl.open(module.contents[0].fileurl);
+                        }
+                    }];
+                }
+            };
+        };
+        return self;
+    }]);
+
+angular.module('mm.addons.mod_opencast')
+    .factory('$mmaModOpencast', ["$mmSite", "$mmUtil", "$q", function($mmSite, $mmUtil, $q) {
+        var self = {};
+        self.logView = function(id) {
+            if (id) {
+                var params = {
+                    urlid: id
+                };
+                return $mmSite.write('mod_url_view_url', params);
+            }
+            return $q.reject();
+        };
+        self.open = function(url) {
+            $mmUtil.openInBrowser(url);
+        };
+        return self;
+    }]);
+angular.module('mm.addons.mod_opencast')
+    .controller('mmaModOpencastIndexCtrl', ["$scope","$mmSite", "$mmSitesManager", "$stateParams", "$mmaModOpencast", "$mmCourse", "$sce", function($scope, $mmSite, $mmSitesManager, $stateParams, $mmaModOpencast, $mmCourse, $sce) {
+        var module = $stateParams.module || {},
+            courseid = $stateParams.courseid;
+        $scope.title = module.name;
+        $scope.description = module.description;
+        $scope.url= module;
+        //var vurl=$mmCourse.getModuleOpencasturl(module.instance);
+        var data = {
+            opencastid: module.instance
+        };
+
+        var presets = {};
+        return $mmSite.read('local_mobile_opencast', data, presets).then(function (vurls) {
+            //storeCoursesInMemory(attendence);
+            //console.log("vurls - "+vurls);
+
+            stdetails = vurls;
+            $scope.vurl=$sce.trustAsResourceUrl(stdetails.url);
+            $scope.type=stdetails.mimetype;
+        });
+
+    }]);
 angular.module('mm.addons.mod_scorm')
 .controller('mmaModScormIndexCtrl', ["$scope", "$stateParams", "$mmaModScorm", "$mmUtil", "$q", "$mmCourse", "$ionicScrollDelegate", "$mmCoursePrefetchDelegate", "$mmaModScormHelper", "$mmEvents", "$mmSite", "$state", "mmCoreOutdated", "mmCoreNotDownloaded", "mmCoreDownloading", "mmaModScormComponent", "mmCoreEventPackageStatusChanged", "$ionicHistory", "mmaModScormEventAutomSynced", "$mmaModScormSync", function($scope, $stateParams, $mmaModScorm, $mmUtil, $q, $mmCourse, $ionicScrollDelegate,
             $mmCoursePrefetchDelegate, $mmaModScormHelper, $mmEvents, $mmSite, $state, mmCoreOutdated, mmCoreNotDownloaded,
