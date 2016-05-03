@@ -6938,7 +6938,7 @@ angular.module('mm.core.login')
     $scope.connect1 = function(uname) {
         var usernamesplit=uname;
 
-            var url='http://moodlemenu.com/fis';
+            var url='http://fis.byolms.com';
 
         $scope.connect(url,usernamesplit);
     }
