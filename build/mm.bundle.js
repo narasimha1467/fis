@@ -18452,12 +18452,14 @@ angular.module('mm.addons.mod_survey')
 }]);
 
 angular.module('mm.addons.mod_url')
-.controller('mmaModUrlIndexCtrl', ["$scope", "$stateParams", "$mmaModUrl", "$mmCourse", function($scope, $stateParams, $mmaModUrl, $mmCourse) {
+.controller('mmaModUrlIndexCtrl', ["$scope", "$stateParams", "$mmaModUrl", "$mmCourse", "$sce", function($scope, $stateParams, $mmaModUrl, $mmCourse, $sce) {
     var module = $stateParams.module || {},
         courseid = $stateParams.courseid;
     $scope.title = module.name;
     $scope.description = module.description;
-    $scope.url = (module.contents && module.contents[0] && module.contents[0].fileurl) ? module.contents[0].fileurl : undefined;
+    var src=(module.contents && module.contents[0] && module.contents[0].fileurl) ? module.contents[0].fileurl : undefined;
+    $scope.url=$sce.trustAsResourceUrl(src);
+    
     $scope.go = function() {
         $mmaModUrl.logView(module.instance).then(function() {
             $mmCourse.checkModuleCompletion(courseid, module.completionstatus);
